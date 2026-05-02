@@ -5,6 +5,8 @@ per-pod CPU utilisation, cluster-level node pressure, and a configurable cost mo
 Implemented as a custom controller with a `SmartScaler` CRD, leader election,
 Prometheus instrumentation, and a structured reconcile loop.
 
+Note: This project is a research/learning-grade Kubernetes autoscaling operator. It demonstrates control-loop design concepts and is not intended as a drop-in replacement for Kubernetes HPA in production systems.
+
 ![Go](https://img.shields.io/badge/Go-1.22-00ADD8?logo=go)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-Operator-326CE5?logo=kubernetes\&logoColor=white)
 ![Prometheus](https://img.shields.io/badge/Monitoring-Prometheus-E6522C?logo=prometheus)
@@ -57,6 +59,8 @@ make setup
 ./scripts/setup.sh
 ```
 
+Recommended test environment: Minikube with 4 CPUs minimum. Lower resources may lead to unstable scaling behavior due to metric starvation.
+
 After setup completes:
 
 ```bash
@@ -69,10 +73,13 @@ make observe
 
 ## Live Output
 
+The behavior shown below is generated in a controlled Minikube environment. Real-world Kubernetes clusters may exhibit metric delays, noise, and non-deterministic scaling behavior.
+
 ### Setup Script
 
 The setup script builds the Docker image, applies CRD and RBAC manifests,
 deploys the operator, and creates the demo workload and SmartScaler resource.
+
 
 ```
 $ ./scripts/setup.sh
@@ -404,6 +411,8 @@ The decision engine is a pure function with no side effects or external dependen
 It receives a snapshot of current state and returns a deterministic `Decision`.
 This design makes it independently unit-testable without a cluster.
 
+Decisions are deterministic for a given snapshot of inputs, but long-term behavior depends on metric sampling intervals and cluster state evolution.
+
 ### Input and Output
 
 ```go
@@ -543,7 +552,7 @@ func (e *Estimator) TotalCost(nodeCount int64, podCount int32) float64 {
            float64(podCount)*e.cfg.CostPerPodPerHour
 }
 
-// Efficiency — CPU per dollar, higher is better utilisation
+// Efficiency — heuristic metric used for comparative analysis of resource usage vs estimated cost
 func (e *Estimator) Efficiency(avgCPUMilli int64, podCount int32) float64 {
     cpuPerPod := float64(avgCPUMilli) / float64(podCount)
     return cpuPerPod / e.cfg.CostPerPodPerHour
@@ -720,6 +729,8 @@ Grafana dashboard: `deploy/monitoring/grafana-dashboard.json`
 ServiceMonitor (Prometheus Operator): `deploy/monitoring/servicemonitor.yaml`
 Alerting rules: `deploy/monitoring/alerts.yaml`
 
+Note: This metric is used only for dashboard visualization and is not intended for aggregation or alerting logic.
+
 ---
 
 ## Manual Deployment
@@ -767,19 +778,9 @@ make test
 go test -race -count=1 -timeout=60s ./...
 ```
 
-## Testing
-
-```bash
-make test
-# equivalent to:
-go test -race -count=1 -timeout=60s ./...
-```
-
 ### Test Results
 
 ![All Tests Passing](docs/images/all_test_check.png)
-
-**Current Coverage:** `72.6%`
 
 Current test suite covers **unit tests, integration tests, and regression tests** across the core system.
 
@@ -873,3 +874,23 @@ minikube stop    # optional — stops the cluster
 ├── Makefile
 └── .golangci.yml
 ```
+Although the decision engine is stateless per call, overall system behavior is state-dependent due to metrics windowing, reconciliation intervals, and Kubernetes API latency.
+
+## Known Limitations
+
+- Metrics-server delays can cause stale or inaccurate scaling decisions
+- System does not model CPU trends (only snapshot + moving average)
+- Scale decisions may oscillate under noisy workloads
+- Node CPU fallback behavior can distort decisions in partial metric failure
+- Cost model is simplified and not equivalent to real cloud billing
+- No awareness of Kubernetes requests/limits or pod QoS classes
+- Scaling is reactive, not predictive
+
+
+## Design Philosophy
+
+- Simplicity over complexity in control loops
+- Kubernetes-native reconciliation instead of external schedulers
+- Observability-first design using Prometheus
+- Safety enforced via min/max bounds and cooldown mechanisms
+- Fully explainable decision engine (no black-box logic)
