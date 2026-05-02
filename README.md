@@ -464,7 +464,7 @@ if in.AvgCPUMilli > e.cfg.ScaleUpCPUThreshold && in.Current < in.Max {
     } else if in.AvgCPUMilli > int64(float64(e.cfg.ScaleUpCPUThreshold)*1.5) {
         step = 2                   // moderately overloaded — +2 replicas
     }
-    // 1x – 1.5x threshold: +1 replica
+    // 1x – 1.5x threshold: +1 replicas
 
     target := clamp(in.Current+step, in.Min, in.Max)
     return Decision{Replicas: target, Action: "scale_up", Reason: "high_avg_cpu"}
