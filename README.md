@@ -1,9 +1,16 @@
-# SmartScaler
+# SmartScaler 
 
 A Kubernetes operator that automatically adjusts Deployment replica counts based on
 per-pod CPU utilisation, cluster-level node pressure, and a configurable cost model.
 Implemented as a custom controller with a `SmartScaler` CRD, leader election,
 Prometheus instrumentation, and a structured reconcile loop.
+
+![Go](https://img.shields.io/badge/Go-1.22-00ADD8?logo=go)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-Operator-326CE5?logo=kubernetes\&logoColor=white)
+![Prometheus](https://img.shields.io/badge/Monitoring-Prometheus-E6522C?logo=prometheus)
+![License](https://img.shields.io/badge/License-MIT-green)
+
+![Dashboard](docs/images/dashboard.png)
 
 ---
 
@@ -109,9 +116,16 @@ smartscaler-operator-6fb64b8c58-p2ctv   1/1     Running   1 (8h ago)   9h
 NAME          TARGET     REPLICAS   CPU(M)   NODECPU(M)   COST($/H)   ACTION     REASON         AGE
 demo-scaler   demo-app   3          105      3672         0.116       scale_up   high_avg_cpu   9h
 ```
+### Setup Execution
+
+![Setup Run](docs/images/before_load_run.png)
 
 The operator detected 105m average pod CPU above the 120m scale-up threshold and
 issued an initial scale-up from the minimum of 2 replicas.
+
+## Result (Before Load)
+
+![Before Load](docs/images/before_load_dashboard_results.png)
 
 ---
 
@@ -119,6 +133,13 @@ issued an initial scale-up from the minimum of 2 replicas.
 
 The operator scaled incrementally over several reconcile cycles (one replica per
 cycle at 15s intervals) until the deployment reached the configured maximum.
+### Scaling in Action
+
+![After Load Run](docs/images/after_load_run.png)
+
+## Result (After Load)
+
+![After Load](docs/images/after_load_dashboard_results.png)
 
 ```
 $ kubectl get all
@@ -160,6 +181,10 @@ replicaset.apps/demo-app-7666bd7fc4   0         0         0       9h
 ### Live Dashboard — make observe
 
 The observe script refreshes every 3 seconds with full cluster state.
+
+### Live Dashboard
+
+![Live Dashboard](docs/images/dashboard.png)
 
 ```
 Every 3.0s                                               Sat May  2 12:08:40 2026
@@ -742,9 +767,67 @@ make test
 go test -race -count=1 -timeout=60s ./...
 ```
 
-Coverage includes unit tests for `scaler`, `decision`, `cost`, and `utils`, plus
-integration and regression tests under `tests/`.
+## Testing
 
+```bash
+make test
+# equivalent to:
+go test -race -count=1 -timeout=60s ./...
+```
+
+### Test Results
+
+![All Tests Passing](docs/images/all_test_check.png)
+
+**Current Coverage:** `72.6%`
+
+Current test suite covers **unit tests, integration tests, and regression tests** across the core system.
+
+---
+
+### Coverage Summary
+
+| Module        | Coverage Scope |
+|--------------|----------------|
+| `decision`   | Core scaling logic (high confidence) |
+| `scaler`     | Kubernetes deployment scaling operations |
+| `cost`       | Cost model + efficiency calculations |
+| `utils`      | Shared helper functions |
+| `controller` | Reconcile loop (partial coverage) |
+| `metrics`    | CPU collection + smoothing logic (partial) |
+| `config`     | Configuration parsing (low coverage gap) |
+| `telemetry`  | Prometheus metrics exposure (low coverage gap) |
+
+---
+
+### Test Types
+
+**Unit Tests**
+- Deterministic scaling logic (`decision`)
+- Replica scaling behavior (`scaler`)
+- Cost and efficiency computation (`cost`)
+- Utility functions (`utils`)
+
+**Integration Tests**
+- Full reconcile cycle simulation
+- Mocked Kubernetes client interactions
+- End-to-end flow: metrics → decision → scaling
+
+**Regression Tests**
+- Protects against breaking changes in:
+  - scaling thresholds
+  - cooldown enforcement
+  - replica boundary constraints
+
+---
+
+### Key Insight
+
+- Core scaling logic is well validated and stable  
+- Weak coverage areas:
+  - metrics edge cases
+  - controller reconciliation paths
+  - telemetry export reliability
 ---
 
 ## Uninstall
