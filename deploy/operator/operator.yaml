@@ -1,0 +1,166 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smartscaler-operator
+  namespace: kube-system
+  labels:
+    app: smartscaler
+    app.kubernetes.io/name: smartscaler
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/version: "v1.0.0"
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port:   "8080"
+    prometheus.io/path:   "/metrics"
+spec:
+  replicas: 2          
+  selector:
+    matchLabels:
+      app: smartscaler
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0   
+  template:
+    metadata:
+      labels:
+        app: smartscaler
+        app.kubernetes.io/name: smartscaler
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port:   "8080"
+        prometheus.io/path:   "/metrics"
+    spec:
+      serviceAccountName: smartscaler-sa
+      priorityClassName: system-cluster-critical
+
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: smartscaler
+
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        fsGroup:   65534
+
+      containers:
+        - name: operator
+          image: smartscaler:latest
+          imagePullPolicy: IfNotPresent
+
+          resources:
+            requests:
+              cpu:    "50m"
+              memory: "64Mi"
+            limits:
+              cpu:    "500m"
+              memory: "256Mi"
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem:   true
+            capabilities:
+              drop: ["ALL"]
+
+          ports:
+            - name:          metrics
+              containerPort: 8080
+              protocol:      TCP
+
+          env:
+            - name:  LOG_LEVEL
+              value: "info"
+            - name:  LOG_FORMAT
+              value: "json"
+
+            - name:  RECONCILE_INTERVAL_SECONDS
+              value: "15"
+            - name:  COOLDOWN_SECONDS
+              value: "60"
+            - name:  SCALE_UP_CPU_THRESHOLD_MILLICPU
+              value: "80"
+            - name:  SCALE_DOWN_CPU_THRESHOLD_MILLICPU
+              value: "30"
+            - name:  NODE_PRESSURE_THRESHOLD_MILLICPU
+              value: "800"
+            - name:  MAX_SCALE_STEP
+              value: "3"
+
+            - name:  COST_PER_NODE_PER_HOUR_USD
+              value: "0.096"   
+            - name:  COST_PER_POD_PER_HOUR_USD
+              value: "0.01"
+            - name:  HIGH_COST_THRESHOLD_USD
+              value: "0.20"
+
+            - name:  LEADER_ELECTION_ENABLED
+              value: "true"
+            - name:  LEADER_ELECTION_NAMESPACE
+              value: "kube-system"
+            - name:  LEADER_ELECTION_ID
+              value: "smartscaler-leader"
+
+            - name:  WORKER_COUNT
+              value: "4"
+
+            - name:  METRICS_PORT
+              value: "8080"
+
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds:       20
+            failureThreshold:    3
+
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds:       10
+            failureThreshold:    3
+
+      terminationGracePeriodSeconds: 30
+
+---
+
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: smartscaler-pdb
+  namespace: kube-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: smartscaler
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: smartscaler-metrics
+  namespace: kube-system
+  labels:
+    app: smartscaler
+    app.kubernetes.io/name: smartscaler
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port:   "8080"
+spec:
+  selector:
+    app: smartscaler
+  ports:
+    - name:       metrics
+      port:       8080
+      targetPort: 8080
+      protocol:   TCP
+  type: ClusterIP

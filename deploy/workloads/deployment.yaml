@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-app
+  namespace: default
+  labels:
+    app: demo
+    app.kubernetes.io/name: demo-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: demo
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: demo
+        app.kubernetes.io/name: demo-app
+    spec:
+      containers:
+        - name: cpu-loader
+          image: busybox
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Starting variable workload — intensity=${LOAD_INTENSITY:-low}"
+              while true; do
+                if [ "${LOAD_INTENSITY:-low}" = "high" ]; then
+                  for i in $(seq 1 800000); do : ; done
+                  sleep 0.05
+                else
+                  for i in $(seq 1 80000); do : ; done
+                  sleep 0.5
+                fi
+              done
+          env:
+            - name: LOAD_INTENSITY
+              value: "low"
+          resources:
+            requests:
+              cpu:    "50m"
+              memory: "32Mi"
+            limits:
+              cpu:    "200m"
+              memory: "64Mi"
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "echo ok"]
+            initialDelaySeconds: 3
+            periodSeconds:       5
+            failureThreshold:    2
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "echo alive"]
+            initialDelaySeconds: 10
+            periodSeconds:       10
+            failureThreshold:    3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem:   true
+            runAsNonRoot:             true
+            runAsUser:                65534
+            capabilities:
+              drop: ["ALL"]

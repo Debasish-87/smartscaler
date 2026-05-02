@@ -1,0 +1,87 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "Current Replicas",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"steps": [{"color":"green","value":null},{"color":"yellow","value":5},{"color":"red","value":8}]}}},
+      "targets": [{"expr": "smartscaler_current_replicas", "legendFormat": "{{deployment}}"}]
+    },
+    {
+      "id": 2, "type": "stat", "title": "Estimated Cost ($/hr)",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "fieldConfig": {"defaults": {"unit": "currencyUSD", "color": {"mode": "thresholds"}, "thresholds": {"steps": [{"color":"green","value":null},{"color":"yellow","value":0.15},{"color":"red","value":0.25}]}}},
+      "targets": [{"expr": "smartscaler_estimated_cost_usd_per_hour", "legendFormat": "{{deployment}}"}]
+    },
+    {
+      "id": 3, "type": "stat", "title": "Cost Efficiency Score",
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"steps": [{"color":"red","value":null},{"color":"yellow","value":100},{"color":"green","value":500}]}}},
+      "targets": [{"expr": "smartscaler_cost_efficiency_score", "legendFormat": "{{deployment}}"}]
+    },
+    {
+      "id": 4, "type": "stat", "title": "Scale Operations (1h)",
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "targets": [{"expr": "increase(smartscaler_scale_operations_total[1h])", "legendFormat": "{{action}}"}]
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Replica Count Over Time",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "fieldConfig": {"defaults": {"unit": "short"}},
+      "targets": [{"expr": "smartscaler_current_replicas", "legendFormat": "{{namespace}}/{{deployment}}"}]
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "Pod CPU (milliCPU) Over Time",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "fieldConfig": {"defaults": {"unit": "short"}},
+      "targets": [
+        {"expr": "smartscaler_deployment_cpu_millicores", "legendFormat": "pod_avg {{deployment}}"},
+        {"expr": "smartscaler_node_cpu_millicores", "legendFormat": "node_avg (cluster)"}
+      ]
+    },
+    {
+      "id": 7, "type": "timeseries", "title": "Estimated Cost ($/hr)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+      "fieldConfig": {"defaults": {"unit": "currencyUSD"}},
+      "targets": [{"expr": "smartscaler_estimated_cost_usd_per_hour", "legendFormat": "{{deployment}}"}]
+    },
+    {
+      "id": 8, "type": "timeseries", "title": "Reconcile Duration (p99)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "targets": [{"expr": "histogram_quantile(0.99, rate(smartscaler_reconcile_duration_seconds_bucket[5m]))", "legendFormat": "p99 {{result}}"}]
+    },
+    {
+      "id": 9, "type": "timeseries", "title": "Scale Operations / min",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+      "targets": [{"expr": "rate(smartscaler_scale_operations_total[1m])*60", "legendFormat": "{{action}} {{deployment}}"}]
+    },
+    {
+      "id": 10, "type": "timeseries", "title": "Scale Errors / min",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+      "fieldConfig": {"defaults": {"color": {"fixedColor": "red", "mode": "fixed"}}},
+      "targets": [{"expr": "rate(smartscaler_scale_errors_total[1m])*60", "legendFormat": "{{deployment}}"}]
+    },
+    {
+      "id": 11, "type": "table", "title": "Last Decision per Scaler",
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 28},
+      "targets": [{"expr": "smartscaler_last_decision_info", "legendFormat": "{{namespace}} / {{deployment}}", "instant": true}],
+      "transformations": [{"id": "labelsToFields", "options": {}}]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["kubernetes", "autoscaler", "cost"],
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "SmartScaler — Cost-Aware Autoscaler",
+  "uid": "smartscaler-v1",
+  "version": 1
+}

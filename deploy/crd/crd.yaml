@@ -1,0 +1,113 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: smartscalers.autoscale.mycompany
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.0
+spec:
+  group: autoscale.mycompany
+  scope: Namespaced
+  names:
+    plural:     smartscalers
+    singular:   smartscaler
+    kind:       SmartScaler
+    shortNames: [ss]
+
+  versions:
+    - name:    v1
+      served:  true
+      storage: true
+
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            SmartScaler is a cost-aware, CPU-signal-driven autoscaler
+            for Kubernetes Deployments. It adjusts replica counts based
+            on per-pod CPU utilisation, cluster-level node pressure, and
+            a configurable cost model.
+          properties:
+            spec:
+              type: object
+              required: [min, max, targetDeployment]
+              properties:
+                min:
+                  type: integer
+                  minimum: 1
+                  description: "Minimum replica count (must be ≥ 1)."
+                max:
+                  type: integer
+                  minimum: 1
+                  description: "Maximum replica count (must be ≥ min)."
+                targetDeployment:
+                  type: string
+                  minLength: 1
+                  description: "Name of the Deployment to manage."
+                cooldownSeconds:
+                  type: integer
+                  minimum: 0
+                  default: 60
+                  description: "Per-resource cooldown override in seconds (0 = use global default)."
+                scaleUpThresholdMilliCPU:
+                  type: integer
+                  minimum: 1
+                  description: "Per-pod CPU (mCPU) above which scale-up is triggered. Overrides global config."
+                scaleDownThresholdMilliCPU:
+                  type: integer
+                  minimum: 1
+                  description: "Per-pod CPU (mCPU) below which scale-down is considered. Overrides global config."
+              x-kubernetes-validations:
+                - rule: "self.min <= self.max"
+                  message: "'min' must be ≤ 'max'."
+
+            status:
+              type: object
+              properties:
+                currentReplicas:
+                  type: integer
+                  minimum: 0
+                lastAction:
+                  type: string
+                reason:
+                  type: string
+                avgCPU:
+                  type: integer
+                  description: "Smoothed per-pod CPU in milliCPU."
+                nodeCPU:
+                  type: integer
+                  description: "Smoothed cluster-average node CPU in milliCPU."
+                cost:
+                  type: number
+                  description: "Estimated $/hr for this workload."
+                lastScaleTime:
+                  type: string
+                  format: date-time
+
+      subresources:
+        status: {}
+
+      additionalPrinterColumns:
+        - name:     Target
+          type:     string
+          jsonPath: .spec.targetDeployment
+        - name:     Replicas
+          type:     integer
+          jsonPath: .status.currentReplicas
+        - name:     CPU(m)
+          type:     integer
+          jsonPath: .status.avgCPU
+        - name:     NodeCPU(m)
+          type:     integer
+          jsonPath: .status.nodeCPU
+        - name:     Cost($/h)
+          type:     number
+          jsonPath: .status.cost
+        - name:     Action
+          type:     string
+          jsonPath: .status.lastAction
+        - name:     Reason
+          type:     string
+          jsonPath: .status.reason
+        - name:     Age
+          type:     date
+          jsonPath: .metadata.creationTimestamp

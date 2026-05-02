@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: smartscaler
+  namespace: kube-system
+  labels:
+    app:     smartscaler
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: smartscaler
+  namespaceSelector:
+    matchNames:
+      - kube-system
+  endpoints:
+    - port:     metrics
+      path:     /metrics
+      interval: 15s
+      scheme:   http

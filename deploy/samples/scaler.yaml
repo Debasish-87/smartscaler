@@ -1,0 +1,15 @@
+apiVersion: autoscale.mycompany/v1
+kind: SmartScaler
+metadata:
+  name:      demo-scaler
+  namespace: default
+  labels:
+    app:     demo
+    env:     production
+spec:
+  targetDeployment: demo-app
+  min: 2
+  max: 10
+  cooldownSeconds: 30                
+  scaleUpThresholdMilliCPU:   100    
+  scaleDownThresholdMilliCPU: 60     

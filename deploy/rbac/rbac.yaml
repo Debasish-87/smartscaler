@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: smartscaler-sa
+  namespace: kube-system
+  labels:
+    app: smartscaler
+    app.kubernetes.io/name: smartscaler
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: smartscaler-role
+  labels:
+    app: smartscaler
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs:     ["get", "list", "watch", "update", "patch"]
+
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs:     ["get", "list", "watch"]
+
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs:     ["get", "list", "watch"]
+
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods", "nodes"]
+    verbs:     ["get", "list"]
+
+  - apiGroups: ["autoscale.mycompany"]
+    resources: ["smartscalers"]
+    verbs:     ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["autoscale.mycompany"]
+    resources: ["smartscalers/status"]
+    verbs:     ["get", "update", "patch"]
+
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs:     ["create", "patch", "update"]
+
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs:     ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: smartscaler-binding
+  labels:
+    app: smartscaler
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind:     ClusterRole
+  name:     smartscaler-role
+subjects:
+  - kind:      ServiceAccount
+    name:      smartscaler-sa
+    namespace: kube-system
