@@ -5,7 +5,7 @@ per-pod CPU utilisation, cluster-level node pressure, and a configurable cost mo
 Implemented as a custom controller with a `SmartScaler` CRD, leader election,
 Prometheus instrumentation, and a structured reconcile loop.
 
-Note: This project is a research/learning-grade Kubernetes autoscaling operator. It demonstrates control-loop design concepts and is not intended as a drop-in replacement for Kubernetes HPA in production systems.
+Note: This project is a Experimental multi-signal Kubernetes autoscaling operator. It demonstrates control-loop design concepts and is not intended as a drop-in replacement for Kubernetes HPA in production systems.
 
 ![Go](https://img.shields.io/badge/Go-1.22-00ADD8?logo=go)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-Operator-326CE5?logo=kubernetes\&logoColor=white)
